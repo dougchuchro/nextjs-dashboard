@@ -18,29 +18,31 @@ pnpm install
 
 ### Allowing native build scripts (bcrypt & sharp)
 
-pnpm 10+ blocks package build scripts by default, and moved the allow-list out of
-`package.json` into `pnpm-workspace.yaml`. This project's `pnpm-workspace.yaml` lists the
-packages whose build scripts are permitted:
+pnpm 10+ blocks package build scripts by default. If you see
+`ERR_PNPM_IGNORED_BUILDS: bcrypt, sharp` (it can even block `pnpm dev`, which runs a
+dependency check first), approve the build scripts once:
+
+```bash
+pnpm approve-builds --all
+```
+
+This runs the scripts and records the approval in `pnpm-workspace.yaml`:
 
 ```yaml
+allowBuilds:
+  bcrypt: true
+  sharp: true
 onlyBuiltDependencies:
   - bcrypt
   - sharp
 ```
 
 - **sharp** — used by Next.js for image optimization. Ships prebuilt platform binaries.
-- **bcrypt** — used for password hashing in the authentication chapter.
+- **bcrypt** — used for password hashing in the authentication chapter. On Node 24 it
+  fetches a prebuilt N-API (`napi-v3`) binary, which is Node-version-agnostic.
 
-### bcrypt native binary on Node 24
-
-`bcrypt@5.1.1` may not build automatically via `pnpm rebuild`. If `require('bcrypt')` fails
-with a missing `bcrypt_lib.node`, fetch the prebuilt N-API binary directly:
-
-```bash
-cd node_modules/.pnpm/bcrypt@5.1.1/node_modules/bcrypt && npx node-pre-gyp install --fallback-to-build && cd -
-```
-
-The `napi-v3` prebuilt binary is Node-version-agnostic, so this works on Node 24.
+Note: the allow-list moved out of `package.json` (the old `pnpm.onlyBuiltDependencies`
+field is no longer read) into `pnpm-workspace.yaml`.
 
 ### Running the app
 
