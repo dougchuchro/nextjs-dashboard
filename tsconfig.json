@@ -18,7 +18,10 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".",
+    // Not needed since TS 4.1 — "paths" below resolves relative to this file.
+    // Also made bare specifiers resolve from the project root ahead of
+    // node_modules, letting local folders shadow npm packages.
+    // "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }
