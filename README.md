@@ -75,6 +75,44 @@ error with no source changes, it was stale, not a real bug.
 **Rule of thumb:** a type error whose file path starts with `.next/` is almost never your
 code. Regenerate before investigating.
 
+### Seeding fails with `23505` on `pg_extension`
+
+```
+{"error":{"name":"PostgresError","code":"23505",
+  "detail":"Key (extname)=(uuid-ossp) already exists.",
+  "table_name":"pg_extension", ...}}
+```
+
+A race in the course's own seed code, fixed in this repo. `GET /seed` invokes its four
+seed functions **concurrently**, and three of them each began with
+`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`. That statement is not atomic: all three
+callers check, all three see "not present", and all three insert into
+`pg_catalog.pg_extension`. One wins; the rest get a unique violation.
+
+**Fix applied:** the `CREATE EXTENSION` was hoisted out of the three functions and now runs
+once in `GET()` before `sql.begin(...)`.
+
+Expect a partially seeded database if you hit this before the fix — some tables commit
+while others die. Verify with row counts (`users` 1, `customers` 6, `invoices` 13,
+`revenue` 12) rather than assuming the failure rolled everything back. Despite the
+`sql.begin(...)` wrapper, the seed functions use the outer `sql` client rather than the
+transaction-scoped one passed to the callback, so they are **not** actually transactional.
+
+### `/seed` is not idempotent — visiting it twice duplicates invoices
+
+`seedInvoices` inserts without an `id` (one is generated per row) but guards with
+`ON CONFLICT (id) DO NOTHING`. That clause can never match, so **every** visit to `/seed`
+appends another 13 invoices. The other three tables insert explicit `id`s (or `month`) and
+their conflict clauses work correctly.
+
+Seed once. To recover from duplicates:
+
+```sql
+TRUNCATE invoices;
+```
+
+then re-run `/seed`.
+
 ### `@tailwind` flagged as "Unknown at rule" in VS Code
 
 Editor-only warning from VS Code's built-in CSS validator, which doesn't know Tailwind's
