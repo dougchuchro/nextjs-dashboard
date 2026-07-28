@@ -51,3 +51,46 @@ pnpm dev
 ```
 
 Then open [http://localhost:3000](http://localhost:3000).
+
+## Gotchas
+
+### Stale type errors pointing at `.next/`
+
+Next.js generates route types into `.next/dev/types/`, and `tsconfig.json` includes that
+directory. Those generated files can fall out of sync with the source — typically after
+adding a new route segment or layout while the dev server is running. `tsc` then reports
+errors in generated code that look alarming but have nothing to do with your source:
+
+```
+.next/dev/types/validator.ts(25,44): error TS2344:
+  Type '"/dashboard"' is not assignable to type '"/"'
+```
+
+Here the generated types still described a world where `/` was the only route with a
+layout, because they predated `app/dashboard/layout.tsx`.
+
+**Fix:** regenerate them — run `pnpm build`, or restart the dev server. If that clears the
+error with no source changes, it was stale, not a real bug.
+
+**Rule of thumb:** a type error whose file path starts with `.next/` is almost never your
+code. Regenerate before investigating.
+
+### `@tailwind` flagged as "Unknown at rule" in VS Code
+
+Editor-only warning from VS Code's built-in CSS validator, which doesn't know Tailwind's
+at-rules. The build is unaffected. Installing the Tailwind CSS IntelliSense extension does
+*not* silence it, since that validator runs independently. To hide it, add to
+`.vscode/settings.json`:
+
+```json
+{
+  "css.lint.unknownAtRules": "ignore"
+}
+```
+
+### `baseUrl` in `tsconfig.json`
+
+Commented out deliberately. It's unnecessary as of TypeScript 4.1 — the `"@/*"` mapping in
+`paths` resolves relative to `tsconfig.json` without it — and it gave project-root folders
+resolution priority over `node_modules`, letting a local directory silently shadow an npm
+package of the same name.
