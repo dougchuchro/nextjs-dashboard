@@ -1,0 +1,10 @@
+{
+  // Use the TypeScript version pinned in package.json (5.7.3) rather than the one
+  // bundled with VS Code, so the editor and `pnpm tsc` always agree.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // Tailwind's at-rules (@tailwind, @apply, @layer) are unknown to VS Code's built-in
+  // CSS validator, which flags them as errors. PostCSS resolves them at build time.
+  "css.lint.unknownAtRules": "ignore"
+}
