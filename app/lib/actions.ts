@@ -23,14 +23,22 @@ export async function createInvoice(formData: FormData) {
     amount: formData.get('amount'),
     status: formData.get('status'),
   });
+
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split('T')[0];
-  // Test it out:
-  console.log({ customerId, amount, status, amountInCents, date });
-  await sql`
-  INSERT INTO invoices (customer_id, amount, status, date)
-  VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
-  `;
+
+  try {
+    await sql`
+      INSERT INTO invoices (customer_id, amount, status, date)
+      VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+    `;
+  } catch (error) {
+    // Log, then rethrow so the invoices error.tsx boundary renders.
+    // Chapter 13 replaces this with useActionState, which is what makes
+    // returning a { message } object from an action type-check.
+    console.error('Database Error: Failed to Create Invoice.', error);
+    throw error;
+  }
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
 }
@@ -44,11 +52,17 @@ export async function updateInvoice(id: string, formData: FormData) {
  
   const amountInCents = amount * 100;
  
-  await sql`
-    UPDATE invoices
-    SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
-    WHERE id = ${id}
-  `;
+  try {
+    await sql`
+        UPDATE invoices
+        SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+        WHERE id = ${id}
+      `;
+  } catch (error) {
+    // See the note in createInvoice — rethrow until Chapter 13.
+    console.error('Database Error: Failed to Update Invoice.', error);
+    throw error;
+  }
  
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
